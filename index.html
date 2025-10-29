@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autonomous SEO Auditor</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.autotable.min.js"></script>
+    
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1F2937; /* Dark Slate Gray */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4B5563; /* Gray */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6B7280; /* Lighter Gray on hover */
+        }
+
+        /* Gradient Background for the entire body */
+        body.gradient-bg {
+            background: linear-gradient(135deg, #1A202C, #2D3748, #1A202C);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Inter', sans-serif; /* A modern font */
+        }
+
+        /* Auth View Specific Background Animation */
+        #auth-view.animated-bg {
+            background: linear-gradient(135deg, #1A202C, #2D3748, #374151);
+            background-size: 400% 400%;
+            animation: gradientAnimation 15s ease infinite;
+        }
+
+        @keyframes gradientAnimation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Initial View Specific Background Animation */
+        #initial-view.animated-bg-url {
+            background: linear-gradient(135deg, #0f172a, #1e293b, #334155); /* Darker, calmer gradient */
+            background-size: 400% 400%;
+            animation: gradientAnimation 20s ease infinite reverse; /* Slower, reverse animation */
+        }
+
+        /* General Card Styling */
+        .card {
+            background-color: #1F2937; /* Darker background for cards */
+            border-radius: 0.75rem; /* Rounded corners */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+            backdrop-filter: blur(8px); /* Frosted glass effect */
+            border: 1px solid rgba(71, 85, 105, 0.3); /* Subtle border */
+        }
+
+        /* Input and Button Styling */
+        input[type="email"],
+        input[type="password"],
+        input[type="text"] {
+            background-color: #374151; /* Input background */
+            border: 1px solid #4B5563; /* Input border */
+            color: #F9FAFB; /* Input text color */
+        }
+        input[type="email"]:focus,
+        input[type="password"]:focus,
+        input[type="text"]:focus {
+            border-color: #06B6D4; /* Accent color on focus */
+            outline: 1px solid #06B6D4;
+        }
+
+        .btn-primary {
+            background-color: #06B6D4; /* Accent color */
+            color: #1F2937;
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            background-color: #0891B2; /* Slightly darker accent on hover */
+        }
+        .btn-secondary {
+            background-color: #4B5563; /* Secondary gray */
+            color: #F9FAFB;
+        }
+        .btn-secondary:hover {
+            background-color: #6B7280; /* Lighter gray on hover */
+        }
+
+        /* Score Dial Styling */
+        .score-dial {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #F9FAFB;
+            background: conic-gradient(#06B6D4 var(--score, 0%), #4B5563 var(--score, 0%));
+            transition: background 0.5s ease-out;
+        }
+        .score-dial::before {
+            content: '';
+            position: absolute;
+            width: 100px; /* Inner circle size */
+            height: 100px;
+            background-color: #1F2937; /* Inner circle color */
+            border-radius: 50%;
+        }
+        .score-dial span {
+            position: relative; /* Keep text above pseudo-element */
+            z-index: 10;
+        }
+
+        /* Loader Animation */
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #06B6D4;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        .ai-loader {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #06B6D4;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Tab Styling */
+        .tab-button {
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            color: #9CA3AF; /* Light gray text */
+            transition: all 0.2s ease-in-out;
+        }
+        .tab-button:hover {
+            color: #F9FAFB;
+            background-color: #374151; /* Darker gray on hover */
+        }
+        .tab-active {
+            background-color: #06B6D4; /* Accent color for active tab */
+            color: #1F2937; /* Dark text on accent */
+        }
+        .tab-active:hover {
+            background-color: #06B6D4; /* Keep accent color on hover */
+            color: #1F2937;
+        }
+
+        /* Issue Severity Icons */
+        .icon-critical { color: #EF4444; } /* Red */
+        .icon-warning { color: #F59E0B; } /* Amber */
+        .icon-passed { color: #10B981; } /* Green */
+
+        /* Dropdown specific styles */
+        .dropdown-menu {
+            z-index: 100; /* Ensure dropdown is above other content */
+        }
+    </style>
+</head>
+<body class="gradient-bg flex items-center justify-center min-h-screen p-4">
+
+    <div id="auth-view" class="animated-bg transition-all duration-500 card w-full max-w-md p-8 space-y-6">
+        <h2 id="auth-title" class="text-3xl font-bold text-center text-white">Sign In</h2>
+        <form id="auth-form" class="space-y-4">
+            <div id="name-fields" class="grid grid-cols-2 gap-4 hidden">
+                <div>
+                    <label for="firstName" class="block text-sm font-medium text-gray-300">First Name</label>
+                    <input type="text" id="firstName" name="firstName" required
+                           class="mt-1 block w-full rounded-md shadow-sm p-3">
+                </div>
+                <div>
+                    <label for="lastName" class="block text-sm font-medium text-gray-300">Last Name</label>
+                    <input type="text" id="lastName" name="lastName" required
+                           class="mt-1 block w-full rounded-md shadow-sm p-3">
+                </div>
+            </div>
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-300">Email Address</label>
+                <input type="email" id="email" name="email" required autocomplete="email"
+                       class="mt-1 block w-full rounded-md shadow-sm p-3">
+            </div>
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-300">Password</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password"
+                       class="mt-1 block w-full rounded-md shadow-sm p-3">
+            </div>
+            <button type="submit" class="btn-primary w-full py-3 rounded-md">Sign In</button>
+        </form>
+        <p class="text-center text-gray-400">
+            <span id="auth-toggle-text">Don't have an account?</span>
+            <button id="toggle-auth-mode" class="text-blue-400 hover:text-blue-300 font-medium ml-1">Sign Up</button>
+        </p>
+        <div id="auth-message" class="text-center mt-4 p-3 rounded-md text-sm" style="display: none;"></div>
+    </div>
+
+    <div id="initial-view" class="animated-bg-url card w-full max-w-2xl p-8 space-y-8 hidden">
+        <div class="flex justify-between items-center text-white">
+            <div class="flex items-center space-x-3">
+                <i class="fas fa-user-circle text-2xl text-accent-color"></i>
+                <span id="user-greeting" class="text-lg font-semibold">Hello, User!</span>
+            </div>
+            <button id="logout-button" class="btn-secondary px-4 py-2 rounded-md text-sm">
+                <i class="fas fa-sign-out-alt mr-2"></i>Logout
+            </button>
+        </div>
+
+        <h2 class="text-3xl font-bold text-center text-white">Audit a New URL</h2>
+        <div class="flex flex-col md:flex-row gap-4">
+            <input type="text" id="url-input" placeholder="Enter website URL (e.g., https://example.com)"
+                   class="flex-grow rounded-md shadow-sm p-3 border-gray-600 bg-gray-700 text-white focus:ring-accent-color focus:border-accent-color">
+            <button id="audit-button" class="btn-primary flex-shrink-0 px-6 py-3 rounded-md font-semibold">
+                Start Audit
+            </button>
+        </div>
+
+        <div class="mt-8 pt-6 border-t border-gray-700 text-center">
+            <h3 class="text-xl font-semibold text-white mb-4">Explore More Tools:</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <button class="btn-secondary py-3 rounded-md flex items-center justify-center space-x-2 opacity-70 cursor-not-allowed">
+                    <i class="fas fa-chart-line"></i><span>Competitor Analysis</span>
+                </button>
+                <button class="btn-secondary py-3 rounded-md flex items-center justify-center space-x-2 opacity-70 cursor-not-allowed">
+                    <i class="fas fa-search"></i><span>Keyword Research</span>
+                </button>
+                <button class="btn-secondary py-3 rounded-md flex items-center justify-center space-x-2 opacity-70 cursor-not-allowed">
+                    <i class="fas fa-sitemap"></i><span>Sitemap Generation</span>
+                </button>
+            </div>
+            <p class="text-gray-500 text-sm mt-2">These features are coming soon!</p>
+        </div>
+
+        <div id="audit-message" class="text-center mt-4 p-3 rounded-md text-sm" style="display: none;"></div>
+    </div>
+
+    <div id="loading-view" class="card w-full max-w-md p-8 text-center space-y-4 hidden">
+        <div class="loader mx-auto"></div>
+        <p class="text-white text-lg font-semibold">Auditing URL... Please wait!</p>
+        <p class="text-gray-400 text-sm">Our AI is meticulously analyzing your website for SEO, performance, and accessibility issues.</p>
+    </div>
+
+    <div id="report-view" class="card w-full max-w-6xl p-8 space-y-6 hidden">
+        <div class="flex justify-between items-center pb-4 border-b border-gray-700">
+            <div class="flex items-center space-x-3 text-white">
+                <i class="fas fa-user-circle text-2xl text-accent-color"></i>
+                <span id="report-user-greeting" class="text-lg font-semibold">Hello, User!</span>
+            </div>
+            <button id="logout-button-report" class="btn-secondary px-4 py-2 rounded-md text-sm">
+                <i class="fas fa-sign-out-alt mr-2"></i>Logout
+            </button>
+        </div>
+
+        <div class="flex flex-col lg:flex-row items-center justify-between bg-gray-800 p-6 rounded-lg">
+            <div class="flex items-center space-x-6">
+                <div class="score-dial relative" style="--score: 0%;">
+                    <span>0</span>
+                </div>
+                <div class="text-white">
+                    <h3 class="text-2xl font-bold">Overall Score</h3>
+                    <p class="text-gray-400">Based on On-Page SEO, Performance & Accessibility</p>
+                    <button id="new-audit-button" class="btn-primary px-4 py-2 rounded-md text-sm mt-3">
+                        <i class="fas fa-plus mr-2"></i>New Audit
+                    </button>
+                </div>
+            </div>
+            <div class="text-center lg:text-right text-white mt-6 lg:mt-0">
+                <h4 class="text-xl font-bold text-accent-color">Predicted Ranking Opportunity</h4>
+                <p id="predicted-ranking" class="text-lg text-gray-200">Analyzing data...</p>
+                <p class="text-gray-400 text-sm mt-1">If all critical issues are addressed.</p>
+                 <div class="relative inline-block text-left mt-4">
+                    <button id="download-dropdown-btn" type="button" class="btn-secondary px-4 py-2 rounded-md text-sm inline-flex items-center">
+                        <i class="fas fa-download mr-2"></i>Download Report <i class="ml-2 fas fa-chevron-down"></i>
+                    </button>
+                    <div id="download-dropdown-menu" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none hidden dropdown-menu">
+                        <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+                            <a href="#" id="download-pdf-btn" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 hover:text-white" role="menuitem">
+                                <i class="fas fa-file-pdf mr-2"></i>Download as PDF
+                            </a>
+                            <a href="#" id="download-md-btn" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 hover:text-white" role="menuitem">
+                                <i class="fas fa-file-alt mr-2"></i>Download as Markdown (.md)
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="metrics-overview" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-white">
+            </div>
+
+        <div class="flex space-x-2 border-b border-gray-700 pb-2">
+            <button class="tab-button tab-active" data-tab="suggestions">Suggestions</button>
+            <button class="tab-button" data-tab="critical">Critical Issues</button>
+            <button class="tab-button" data-tab="warnings">Warnings</button>
+            <button class="tab-button" data-tab="passed">Passed Checks</button>
+        </div>
+
+        <div id="issue-list" class="space-y-4">
+            </div>
+    </div>
+
+    <script>
+        // Constants for API Endpoints
+        const BACKEND_URL = "http://127.0.0.1:5001"; // Flask Python backend
+        
+        // Global State
+        let currentUser = null; // Stores logged-in user details
+        let currentReportData = null; // Stores the current audit report data
+        let currentActiveTab = 'suggestions'; // Default active tab for issues
+
+        // --- Utility Functions ---
+        function showView(viewId) {
+            document.getElementById('auth-view').classList.add('hidden');
+            document.getElementById('initial-view').classList.add('hidden');
+            document.getElementById('loading-view').classList.add('hidden');
+            document.getElementById('report-view').classList.add('hidden');
+            document.getElementById(viewId).classList.remove('hidden');
+
+            // Apply specific animations
+            if (viewId === 'auth-view') {
+                document.getElementById('auth-view').classList.add('animated-bg');
+                document.getElementById('initial-view').classList.remove('animated-bg-url'); // Remove from other views
+            } else if (viewId === 'initial-view') {
+                document.getElementById('initial-view').classList.add('animated-bg-url');
+                document.getElementById('auth-view').classList.remove('animated-bg'); // Remove from other views
+            } else {
+                document.getElementById('auth-view').classList.remove('animated-bg');
+                document.getElementById('initial-view').classList.remove('animated-bg-url');
+            }
+        }
+
+        function showMessage(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.style.display = 'block';
+            element.className = `text-center mt-4 p-3 rounded-md text-sm ${isError ? 'bg-red-900 text-red-300' : 'bg-green-900 text-green-300'}`;
+        }
+
+        function hideMessage(elementId) {
+            document.getElementById(elementId).style.display = 'none';
+        }
+
+        function updateScoreDial(score) {
+            const dial = document.querySelector('.score-dial');
+            const scoreText = dial.querySelector('span');
+            
+            // Animate the score change
+            let currentScore = parseInt(scoreText.textContent);
+            let increment = score > currentScore ? 1 : -1;
+            let duration = 500; // ms
+            let steps = Math.abs(score - currentScore);
+            let delay = duration / steps;
+
+            let animationInterval = setInterval(() => {
+                if (currentScore !== score) {
+                    currentScore += increment;
+                    scoreText.textContent = currentScore;
+                    dial.style.setProperty('--score', `${currentScore}%`);
+                } else {
+                    clearInterval(animationInterval);
+                }
+            }, delay);
+        }
+        
+        // --- Authentication Logic (Now calling Flask Backend) ---
+        async function handleRegister(e) {
+            e.preventDefault();
+            hideMessage('auth-message');
+
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                // Hitting the new Flask /auth/register endpoint
+                const response = await fetch(`${BACKEND_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ firstName, lastName, email, password })
+                });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showMessage('auth-message', result.message, false);
+                    document.getElementById('auth-form').reset();
+                    toggleAuthMode(); // Switch back to login view
+                } else {
+                    showMessage('auth-message', result.error || 'Registration failed.', true);
+                }
+            } catch (error) {
+                showMessage('auth-message', 'Network error. Ensure Python backend is running.', true);
+                console.error('Registration error:', error);
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            hideMessage('auth-message');
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                // Hitting the new Flask /auth/login endpoint
+                const response = await fetch(`${BACKEND_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    currentUser = {
+                        userId: result.userId,
+                        firstName: result.firstName,
+                        lastName: result.lastName,
+                        email: result.email
+                    };
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser)); // Store user session
+                    document.getElementById('user-greeting').textContent = `Hello, ${currentUser.firstName}!`;
+                    document.getElementById('report-user-greeting').textContent = `Hello, ${currentUser.firstName}!`;
+                    showView('initial-view');
+                } else {
+                    showMessage('auth-message', result.error || 'Login failed.', true);
+                }
+            } catch (error) {
+                showMessage('auth-message', 'Network error. Ensure Python backend is running.', true);
+                console.error('Login error:', error);
+            }
+        }
+
+        function handleLogout() {
+            currentUser = null;
+            localStorage.removeItem('currentUser'); // Clear user session
+            showView('auth-view');
+            // Reset forms and messages
+            document.getElementById('auth-form').reset();
+            hideMessage('auth-message');
+            hideMessage('audit-message');
+            // Ensure login view is active after logout
+            document.getElementById('auth-title').textContent = 'Sign In';
+            document.getElementById('name-fields').classList.add('hidden');
+            document.getElementById('auth-toggle-text').textContent = "Don't have an account?";
+            document.getElementById('toggle-auth-mode').textContent = "Sign Up";
+            document.getElementById('auth-form').onsubmit = handleLogin;
+        }
+
+        function toggleAuthMode() {
+            const authTitle = document.getElementById('auth-title');
+            const nameFields = document.getElementById('name-fields');
+            const toggleText = document.getElementById('auth-toggle-text');
+            const toggleButton = document.getElementById('toggle-auth-mode');
+            const authForm = document.getElementById('auth-form');
+
+            if (authTitle.textContent === 'Sign In') {
+                authTitle.textContent = 'Register';
+                nameFields.classList.remove('hidden');
+                toggleText.textContent = "Already have an account?";
+                toggleButton.textContent = "Sign In";
+                authForm.onsubmit = handleRegister;
+            } else {
+                authTitle.textContent = 'Sign In';
+                nameFields.classList.add('hidden');
+                toggleText.textContent = "Don't have an account?";
+                toggleButton.textContent = "Sign Up";
+                authForm.onsubmit = handleLogin;
+            }
+            hideMessage('auth-message');
+        }
+
+        // --- Audit Simulation Logic ---
+        async function simulateSeoAudit(url) {
+            // This is a mock function to simulate an audit.
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    const mockReport = generateMockReport(url);
+                    resolve(mockReport);
+                }, 3500); // Simulate network delay and processing
+            });
+        }
+
+        function generateMockReport(url) {
+            const score = Math.floor(Math.random() * 30) + 70; // Score between 70-99
+            const metrics = {
+                performance: { score: Math.floor(Math.random() * 20) + 75, impact: 20, description: "Website loading speed and responsiveness." },
+                seo: { score: Math.floor(Math.random() * 20) + 70, impact: 35, description: "On-page optimization for search engines." },
+                accessibility: { score: Math.floor(Math.random() * 20) + 80, impact: 15, description: "Usability for all users, including those with disabilities." },
+                best_practices: { score: Math.floor(Math.random() * 20) + 70, impact: 30, description: "Modern web development standards and security." },
+            };
+
+            const issues = [
+                { id: 'no-h1', metric: 'seo', severity: 'critical', title: 'Missing or Multiple H1 Tags', description: 'Every page should have a single, descriptive H1 tag.', scoreImpact: 8, context: { topic: 'Autonomous SEO Auditor homepage' } },
+                { id: 'title-length', metric: 'seo', severity: 'warning', title: 'Title Tag is Too Long', description: 'Page title exceeds optimal length (60 characters), risking truncation in search results.', scoreImpact: 5, context: { title: 'Autonomous SEO Auditor: The Ultimate AI-Powered Tool for On-Page and Technical SEO Optimization and Ranking Improvement' } },
+                { id: 'image-alt-text', metric: 'accessibility', severity: 'critical', title: 'Image Missing Alt Text', description: 'Images without alt text are inaccessible and hurt SEO.', scoreImpact: 7, context: { src: 'an illustration of a magnifying glass with a gear' } },
+                { id: 'meta-description', metric: 'seo', severity: 'warning', title: 'Meta Description Missing or Too Short', description: 'A compelling meta description improves click-through rates.', scoreImpact: 4, context: { topic: 'AI-driven SEO optimization for small businesses' } },
+                { id: 'broken-link', metric: 'performance', severity: 'critical', title: 'Broken Internal Link Found', description: 'Internal broken links create a poor user experience and waste crawl budget.', scoreImpact: 6 },
+                { id: 'slow-load', metric: 'performance', severity: 'critical', title: 'Page Load Speed is Slow', description: 'Optimize images and scripts to improve loading times.', scoreImpact: 10 },
+                { id: 'font-size', metric: 'accessibility', severity: 'warning', title: 'Small Font Size Detected', description: 'Ensure text is readable for all users.', scoreImpact: 3 },
+                { id: 'ssl-missing', metric: 'best_practices', severity: 'critical', title: 'SSL Certificate Missing', description: 'HTTPS is crucial for security and SEO rankings.', scoreImpact: 9 },
+                { id: 'responsive-design', metric: 'best_practices', severity: 'warning', title: 'Not Fully Responsive on Mobile', description: 'Ensure your site adapts to all screen sizes for mobile-first indexing.', scoreImpact: 5 },
+                { id: 'duplicate-content', metric: 'seo', severity: 'critical', title: 'Duplicate Content Detected', description: 'Multiple pages with identical content can confuse search engines.', scoreImpact: 12 },
+            ];
+
+            // Assign some passed checks
+            const passedChecks = [
+                { id: 'mobile-friendly', metric: 'accessibility', severity: 'passed', title: 'Mobile-Friendly Design', description: 'Website is fully responsive and mobile-friendly.' },
+                { id: 'schema-markup', metric: 'seo', severity: 'passed', title: 'Schema Markup Present', description: 'Structured data markup found and valid.' },
+                { id: 'fast-server', metric: 'performance', severity: 'passed', title: 'Fast Server Response', description: 'Server response time is optimal.' },
+                { id: 'robots-txt', metric: 'best_practices', severity: 'passed', title: 'Robots.txt Found', description: 'Robots.txt file found and correctly configured.' },
+            ];
+            
+            // Mix some passed checks into the issues
+            for(let i = 0; i < 3; i++) {
+                const randomIndex = Math.floor(Math.random() * passedChecks.length);
+                issues.push(passedChecks.splice(randomIndex, 1)[0]);
+            }
+
+            return { url, score, metrics, issues };
+        }
+
+        // --- Report Rendering Logic ---
+        function renderReport(reportData) {
+            currentReportData = reportData; // Store report globally
+            updateScoreDial(reportData.score);
+            document.querySelector('.score-dial span').textContent = reportData.score;
+            document.getElementById('predicted-ranking').textContent = getPredictedRanking(reportData.score);
+            
+            renderMetrics(reportData.metrics);
+            renderIssues(currentActiveTab); // Render based on the current tab
+            showView('report-view');
+        }
+
+        function renderMetrics(metrics) {
+            const metricsOverview = document.getElementById('metrics-overview');
+            metricsOverview.innerHTML = ''; // Clear previous metrics
+
+            for (const key in metrics) {
+                const metric = metrics[key];
+                const metricElement = document.createElement('div');
+                metricElement.className = 'card p-4 flex flex-col items-center justify-center';
+                metricElement.innerHTML = `
+                    <div class="text-3xl font-bold text-accent-color">${metric.score}</div>
+                    <div class="text-gray-300 text-sm capitalize">${key.replace('_', ' ')}</div>
+                    <div class="text-gray-500 text-xs text-center mt-1">${metric.description}</div>
+                `;
+                metricsOverview.appendChild(metricElement);
+            }
+        }
+
+        function renderIssues(tab) {
+            currentActiveTab = tab; // Update active tab
+            const issueList = document.getElementById('issue-list');
+            issueList.innerHTML = ''; // Clear previous issues
+
+            const filteredIssues = currentReportData.issues.filter(issue => {
+                if (tab === 'suggestions') {
+                    // Suggestions include critical and warnings that are not 'passed'
+                    return issue.severity !== 'passed';
+                }
+                return issue.severity === tab;
+            });
+
+            if (filteredIssues.length === 0) {
+                issueList.innerHTML = `<p class="text-gray-400 text-center py-8">No ${tab.replace('-', ' ')} found for this tab!</p>`;
+                return;
+            }
+
+            filteredIssues.forEach(issue => {
+                const issueElement = document.createElement('div');
+                issueElement.className = 'card p-4 space-y-3';
+
+                let iconClass = '';
+                if (issue.severity === 'critical') iconClass = 'fas fa-exclamation-circle icon-critical';
+                else if (issue.severity === 'warning') iconClass = 'fas fa-exclamation-triangle icon-warning';
+                else if (issue.severity === 'passed') iconClass = 'fas fa-check-circle icon-passed';
+
+                let aiFixSection = '';
+                if (issue.severity !== 'passed' && (issue.id === 'no-h1' || issue.id === 'title-length' || issue.id === 'image-alt-text' || issue.id === 'meta-description')) {
+                    aiFixSection = `
+                        <div class="bg-gray-700 p-3 rounded-md mt-3">
+                            <h5 class="text-accent-color font-semibold mb-2">Enhance with AI:</h5>
+                            <button class="btn-primary generate-fix-btn px-4 py-2 text-sm rounded-md" data-issue-id="${issue.id}" data-issue-context='${JSON.stringify(issue.context || {})}' data-issue-title="${issue.title}">
+                                <i class="fas fa-magic mr-2"></i>Generate Fix
+                            </button>
+                            <div class="ai-suggestion-area mt-2 hidden text-gray-200">
+                                <p class="ai-suggestion-text italic"></p>
+                                <button class="btn-secondary apply-fix-btn px-4 py-2 text-sm rounded-md mt-2" data-issue-id="${issue.id}">
+                                    <i class="fas fa-check-circle mr-2"></i>Apply Fix (Simulated)
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                issueElement.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <i class="${iconClass} text-xl"></i>
+                        <h4 class="text-lg font-semibold text-white">${issue.title}</h4>
+                        <span class="text-xs px-2 py-1 rounded-full capitalize ${issue.severity === 'critical' ? 'bg-red-800 text-red-100' : issue.severity === 'warning' ? 'bg-yellow-800 text-yellow-100' : 'bg-green-800 text-green-100'}">${issue.severity}</span>
+                    </div>
+                    <p class="text-gray-400 text-sm">${issue.description}</p>
+                    ${aiFixSection}
+                `;
+                issueList.appendChild(issueElement);
+            });
+
+            // Re-attach event listeners for newly rendered buttons
+            attachIssueButtonListeners();
+
+            // Update tab button styling
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('tab-active', 'bg-accent-color', 'text-primary-color');
+                button.classList.add('text-gray-400', 'hover:bg-gray-700', 'hover:text-white');
+                if (button.dataset.tab === tab) {
+                    button.classList.add('tab-active');
+                    button.classList.remove('text-gray-400', 'hover:bg-gray-700', 'hover:text-white');
+                }
+            });
+        }
+
+        function getPredictedRanking(currentScore) {
+            if (currentScore >= 95) return "Top 3 Position (Page 1)";
+            if (currentScore >= 90) return "Top 5 Position (Page 1)";
+            if (currentScore >= 85) return "Top 10 Position (Page 1)";
+            if (currentScore >= 75) return "Page 2-3 Ranking";
+            return "Page 3+ Ranking";
+        }
+
+
+        // --- AI Fix Interaction Logic ---
+        async function handleGenerateFix(button) {
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2 ai-loader"></i>Generating...';
+            
+            const issueId = button.dataset.issueId;
+            const context = JSON.parse(button.dataset.issueContext);
+            const aiSuggestionArea = button.nextElementSibling; // The div containing suggestion text and apply button
+            const aiSuggestionText = aiSuggestionArea.querySelector('.ai-suggestion-text');
+            const applyFixButton = aiSuggestionArea.querySelector('.apply-fix-btn');
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/generate-fix`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ issueId, context })
+                });
+                const result = await response.json();
+
+                if (response.ok) {
+                    aiSuggestionText.textContent = `Suggestion: "${result.suggestion}"`;
+                    aiSuggestionArea.classList.remove('hidden');
+                    applyFixButton.dataset.suggestion = result.suggestion; // Store suggestion for apply fix
+                } else {
+                    aiSuggestionText.textContent = `Error: ${result.error || 'Could not generate fix.'}`;
+                    aiSuggestionArea.classList.remove('hidden');
+                    applyFixButton.classList.add('hidden'); // Hide apply button on error
+                }
+            } catch (error) {
+                aiSuggestionText.textContent = 'Network error contacting AI backend.';
+                aiSuggestionArea.classList.remove('hidden');
+                applyFixButton.classList.add('hidden'); // Hide apply button on error
+                console.error('AI generation error:', error);
+            } finally {
+                button.innerHTML = '<i class="fas fa-magic mr-2"></i>Generate Fix';
+                button.disabled = false;
+            }
+        }
+
+        async function handleApplyFix(button) {
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2 ai-loader"></i>Applying...';
+
+            const issueId = button.dataset.issueId;
+            const suggestion = button.dataset.suggestion;
+            
+            // Send to backend for logging/simulation
+            try {
+                const response = await fetch(`${BACKEND_URL}/apply-fix`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ issueId, suggestion })
+                });
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Simulate score update and move issue to 'Passed'
+                    const issueIndex = currentReportData.issues.findIndex(issue => issue.id === issueId);
+                    if (issueIndex > -1) {
+                        const fixedIssue = currentReportData.issues[issueIndex];
+                        fixedIssue.severity = 'passed';
+                        // Add score impact back to overall score
+                        currentReportData.score = Math.min(100, currentReportData.score + (fixedIssue.scoreImpact || 0));
+                        updateScoreDial(currentReportData.score);
+                        document.getElementById('predicted-ranking').textContent = getPredictedRanking(currentReportData.score);
+                        
+                        // Re-render issues to reflect the change
+                        renderIssues(currentActiveTab);
+                    }
+                    button.parentElement.innerHTML = '<p class="text-green-400 flex items-center"><i class="fas fa-check-circle mr-2"></i>Fix Applied!</p>';
+                } else {
+                    button.innerHTML = `<i class="fas fa-exclamation-triangle mr-2"></i>Error: ${result.error}`;
+                }
+            } catch (error) {
+                button.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i>Network Error';
+                console.error('Apply fix error:', error);
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        function attachIssueButtonListeners() {
+            document.querySelectorAll('.generate-fix-btn').forEach(button => {
+                button.onclick = () => handleGenerateFix(button);
+            });
+            document.querySelectorAll('.apply-fix-btn').forEach(button => {
+                button.onclick = () => handleApplyFix(button);
+            });
+        }
+
+        // --- Download Report Logic (Enhanced) ---
+        async function downloadReport(format) {
+            if (!currentReportData) {
+                alert("Please run an audit first to generate a report.");
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const fileName = `SEO_Audit_Report_${new Date().toISOString().slice(0,10)}.${format}`;
+
+            // Add Header
+            doc.setFontSize(22);
+            doc.text("Autonomous SEO Audit Report", 14, 25);
+            doc.setFontSize(12);
+            doc.setTextColor(100);
+            doc.text(`URL: ${currentReportData.url}`, 14, 35);
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 42);
+            doc.line(14, 45, 196, 45); // Underline
+
+            let yOffset = 55;
+
+            // Overall Score
+            doc.setFontSize(16);
+            doc.setTextColor(20);
+            doc.text("Overall Score:", 14, yOffset);
+            doc.setFontSize(20);
+            doc.setTextColor(0, 182, 212); // Accent color
+            doc.text(`${currentReportData.score}%`, 55, yOffset);
+            doc.setTextColor(100); // Reset color
+            doc.setFontSize(10);
+            doc.text(getPredictedRanking(currentReportData.score), 14, yOffset + 7);
+            yOffset += 20;
+
+            // Metrics Overview
+            doc.setFontSize(16);
+            doc.setTextColor(20);
+            doc.text("Metrics Overview", 14, yOffset);
+            yOffset += 7;
+            const metricsData = Object.keys(currentReportData.metrics).map(key => [
+                key.replace('_', ' ').charAt(0).toUpperCase() + key.replace('_', ' ').slice(1),
+                `${currentReportData.metrics[key].score}%`,
+                currentReportData.metrics[key].description
+            ]);
+            doc.autoTable({
+                startY: yOffset,
+                head: [['Metric', 'Score', 'Description']],
+                body: metricsData,
+                theme: 'striped',
+                headStyles: { fillColor: [31, 41, 55], textColor: 255 }, // Dark header
+                styles: { fontSize: 9, cellPadding: 2, textColor: 50 },
+                columnStyles: { 0: { cellWidth: 30 }, 1: { cellWidth: 20 }, 2: { cellWidth: 'auto' } },
+                margin: { left: 14, right: 14 }
+            });
+            yOffset = doc.autoTable.previous.finalY + 10;
+
+            // Issues Section
+            doc.setFontSize(16);
+            doc.setTextColor(20);
+            doc.text("Detected Issues & Suggestions", 14, yOffset);
+            yOffset += 7;
+
+            const issuesData = [];
+            currentReportData.issues.sort((a,b) => { // Sort to show critical first
+                const severityOrder = { 'critical': 1, 'warning': 2, 'passed': 3 };
+                return severityOrder[a.severity] - severityOrder[b.severity];
+            }).forEach(issue => {
+                issuesData.push([
+                    issue.severity.charAt(0).toUpperCase() + issue.severity.slice(1),
+                    issue.title,
+                    issue.description
+                ]);
+            });
+
+            doc.autoTable({
+                startY: yOffset,
+                head: [['Severity', 'Issue', 'Description']],
+                body: issuesData,
+                theme: 'striped',
+                headStyles: { fillColor: [31, 41, 55], textColor: 255 },
+                styles: { fontSize: 9, cellPadding: 2, textColor: 50 },
+                columnStyles: { 0: { cellWidth: 20 }, 1: { cellWidth: 60 }, 2: { cellWidth: 'auto' } },
+                margin: { left: 14, right: 14 }
+            });
+            yOffset = doc.autoTable.previous.finalY + 10;
+
+
+            if (format === 'pdf') {
+                doc.save(fileName);
+            } else if (format === 'md') {
+                let markdownContent = `# SEO Audit Report for ${currentReportData.url}\n\n`;
+                markdownContent += `**Date:** ${new Date().toLocaleDateString()}\n\n`;
+                markdownContent += `## Overall Score: ${currentReportData.score}%\n`;
+                markdownContent += `*Prediction:* ${getPredictedRanking(currentReportData.score)}\n\n`;
+                markdownContent += `## Metrics Overview\n\n`;
+                Object.keys(currentReportData.metrics).forEach(key => {
+                    const metric = currentReportData.metrics[key];
+                    markdownContent += `- **${key.replace('_', ' ').charAt(0).toUpperCase() + key.replace('_', ' ').slice(1)}:** ${metric.score}% - ${metric.description}\n`;
+                });
+                markdownContent += `\n## Detected Issues & Suggestions\n\n`;
+                currentReportData.issues.forEach(issue => {
+                    markdownContent += `### ${issue.title} (${issue.severity.charAt(0).toUpperCase() + issue.severity.slice(1)})\n`;
+                    markdownContent += `* **Description:** ${issue.description}\n`;
+                    markdownContent += `* **Metric Impact:** ${issue.metric.charAt(0).toUpperCase() + issue.metric.slice(1)}\n\n`;
+                });
+
+                const blob = new Blob([markdownContent], { type: 'text/markdown' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+        }
+
+
+        // --- Event Listeners and Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Auth Form Toggle
+            document.getElementById('toggle-auth-mode').addEventListener('click', toggleAuthMode);
+            document.getElementById('auth-form').onsubmit = handleLogin; // Default to login
+
+            // Check for existing session
+            const storedUser = localStorage.getItem('currentUser');
+            if (storedUser) {
+                currentUser = JSON.parse(storedUser);
+                document.getElementById('user-greeting').textContent = `Hello, ${currentUser.firstName}!`;
+                document.getElementById('report-user-greeting').textContent = `Hello, ${currentUser.firstName}!`;
+                showView('initial-view');
+            } else {
+                showView('auth-view');
+            }
+
+            // Logout Buttons
+            document.getElementById('logout-button').addEventListener('click', handleLogout);
+            document.getElementById('logout-button-report').addEventListener('click', handleLogout);
+
+            // Audit Button
+            document.getElementById('audit-button').addEventListener('click', async () => {
+                const urlInput = document.getElementById('url-input');
+                const url = urlInput.value.trim();
+
+                if (!url) {
+                    showMessage('audit-message', 'Please enter a URL to audit.', true);
+                    return;
+                }
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    showMessage('audit-message', 'Please enter a valid URL starting with http:// or https://', true);
+                    return;
+                }
+                hideMessage('audit-message');
+                showView('loading-view');
+                const report = await simulateSeoAudit(url);
+                renderReport(report);
+            });
+
+            // New Audit Button
+            document.getElementById('new-audit-button').addEventListener('click', () => {
+                showView('initial-view');
+                document.getElementById('url-input').value = ''; // Clear input
+                document.getElementById('audit-message').style.display = 'none'; // Hide message
+            });
+
+            // Issue Tab Buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    renderIssues(e.target.dataset.tab);
+                });
+            });
+
+            // Download Report Dropdown Toggle
+            const downloadDropdownBtn = document.getElementById('download-dropdown-btn');
+            const downloadDropdownMenu = document.getElementById('download-dropdown-menu');
+            downloadDropdownBtn.addEventListener('click', (event) => {
+                event.stopPropagation(); // Prevent document click from closing immediately
+                downloadDropdownMenu.classList.toggle('hidden');
+            });
+
+            // Close dropdown if clicked outside
+            document.addEventListener('click', (event) => {
+                if (!downloadDropdownBtn.contains(event.target) && !downloadDropdownMenu.contains(event.target)) {
+                    downloadDropdownMenu.classList.add('hidden');
+                }
+            });
+
+            // Download PDF/MD Buttons
+            document.getElementById('download-pdf-btn').addEventListener('click', (e) => {
+                e.preventDefault();
+                downloadReport('pdf');
+                downloadDropdownMenu.classList.add('hidden'); // Close dropdown
+            });
+
+            document.getElementById('download-md-btn').addEventListener('click', (e) => {
+                e.preventDefault();
+                downloadReport('md');
+                downloadDropdownMenu.classList.add('hidden'); // Close dropdown
+            });
+        });
+    </script>
+</body>
+</html>
